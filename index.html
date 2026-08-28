@@ -3,15 +3,82 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Code Visualizer · Interactive Algorithms & Data Structures</title>
-    <meta name="description" content="High-performance interactive Algorithm and Data Structure visualizer with step-by-step debugger, multi-language code implementations (Python, JS, C++, Java), and dynamic graphs." />
+    <title>Code Visualizer · Interactive Algorithm Studio</title>
+    <meta name="description" content="Interactive algorithm and data structure visualizer with step-by-step debugger and multi-language code inspector." />
     <meta name="theme-color" content="#080b14" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='16 18 22 12 16 6'></polyline><polyline points='8 6 2 12 8 18'></polyline></svg>" />
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #080b14;
+        color: #e2e8f0;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        overflow-x: hidden;
+      }
+      /* Custom Dark Scrollbars */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #080b14;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+      }
+      /* Custom Dark Theme Range Slider */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: #1e293b;
+        height: 6px;
+        border-radius: 3px;
+        outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #6366f1;
+        cursor: pointer;
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+        border: 2px solid #080b14;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+      }
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        background: #818cf8;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #6366f1;
+        cursor: pointer;
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+        border: 2px solid #080b14;
+      }
+      input[type="range"]::-moz-range-track {
+        background: #1e293b;
+        height: 6px;
+        border-radius: 3px;
+      }
+    </style>
   </head>
-  <body style="margin: 0; background: #080b14; color: #e2e8f0; overflow-x: hidden;">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
