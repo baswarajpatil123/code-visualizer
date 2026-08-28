@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, Sparkles, Volume2, VolumeX, ArrowUpDown } from "lucide-react";
+import CodeStepperPanel from "../components/CodeStepperPanel.jsx";
+import { ALGORITHM_CODE_PHASES } from "../data/algorithmsData.js";
 
-// Web Audio API helper for sound effects on comparison/swap
-function playTone(freq = 440, type = "sine", duration = 0.08) {
+function playTone(freq = 440, type = "sine", duration = 0.06) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
@@ -17,28 +18,24 @@ function playTone(freq = 440, type = "sine", duration = 0.08) {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + duration);
-  } catch (e) {
-    // Ignore audio autoplay restrictions
-  }
+  } catch (e) {}
 }
 
-// Generate Merge Sort Steps
 function generateMergeSortSteps(initialArr) {
   const steps = [];
   const arr = [...initialArr];
+  let comparisons = 0, swaps = 0;
 
   steps.push({
     arr: [...arr],
     comparing: [],
     swapping: [],
     sorted: [],
-    desc: "Initial unsorted array before divide-and-conquer.",
-    comparisons: 0,
-    swaps: 0
+    codePhase: "divide",
+    desc: "Initial unsorted array. Preparing divide-and-conquer splitting.",
+    comparisons,
+    swaps
   });
-
-  let comparisons = 0;
-  let swaps = 0;
 
   function merge(start, mid, end) {
     const left = arr.slice(start, mid + 1);
@@ -52,6 +49,7 @@ function generateMergeSortSteps(initialArr) {
         comparing: [start + i, mid + 1 + j],
         swapping: [],
         sorted: [],
+        codePhase: "compare",
         desc: `Comparing left[${i}] (${left[i]}) with right[${j}] (${right[j]}).`,
         comparisons,
         swaps
@@ -71,7 +69,8 @@ function generateMergeSortSteps(initialArr) {
         comparing: [],
         swapping: [k],
         sorted: [],
-        desc: `Placed value ${arr[k]} into index ${k}.`,
+        codePhase: "swapping",
+        desc: `Placed ${arr[k]} into sorted index ${k}.`,
         comparisons,
         swaps
       });
@@ -85,7 +84,8 @@ function generateMergeSortSteps(initialArr) {
         comparing: [],
         swapping: [k],
         sorted: [],
-        desc: `Flushing remaining left element ${arr[k]} to index ${k}.`,
+        codePhase: "swapping",
+        desc: `Flushing remaining left ${arr[k]} to index ${k}.`,
         comparisons,
         swaps
       });
@@ -100,7 +100,8 @@ function generateMergeSortSteps(initialArr) {
         comparing: [],
         swapping: [k],
         sorted: [],
-        desc: `Flushing remaining right element ${arr[k]} to index ${k}.`,
+        codePhase: "swapping",
+        desc: `Flushing remaining right ${arr[k]} to index ${k}.`,
         comparisons,
         swaps
       });
@@ -124,7 +125,8 @@ function generateMergeSortSteps(initialArr) {
     comparing: [],
     swapping: [],
     sorted: arr.map((_, i) => i),
-    desc: `✅ Merge Sort Complete! Array sorted in O(N log N) time.`,
+    codePhase: "done",
+    desc: `✅ Merge Sort Complete in O(N log N) time.`,
     comparisons,
     swaps
   });
@@ -132,7 +134,6 @@ function generateMergeSortSteps(initialArr) {
   return steps;
 }
 
-// Generate Quick Sort Steps
 function generateQuickSortSteps(initialArr) {
   const steps = [];
   const arr = [...initialArr];
@@ -144,7 +145,8 @@ function generateQuickSortSteps(initialArr) {
     swapping: [],
     pivot: null,
     sorted: [],
-    desc: "Starting Quick Sort. Pivot selection and partitioning.",
+    codePhase: "pivot",
+    desc: "Starting Quick Sort. Partitioning arrays around pivot.",
     comparisons,
     swaps
   });
@@ -159,7 +161,8 @@ function generateQuickSortSteps(initialArr) {
       swapping: [],
       pivot: high,
       sorted: [],
-      desc: `Chosen pivot value = ${pivotVal} at index ${high}.`,
+      codePhase: "pivot",
+      desc: `Chosen pivot = ${pivotVal} at index ${high}.`,
       comparisons,
       swaps
     });
@@ -172,6 +175,7 @@ function generateQuickSortSteps(initialArr) {
         swapping: [],
         pivot: high,
         sorted: [],
+        codePhase: "comparing",
         desc: `Comparing arr[${j}] (${arr[j]}) with pivot (${pivotVal}).`,
         comparisons,
         swaps
@@ -187,7 +191,8 @@ function generateQuickSortSteps(initialArr) {
           swapping: [i, j],
           pivot: high,
           sorted: [],
-          desc: `arr[${j}] < pivot: Swapped arr[${i}] and arr[${j}].`,
+          codePhase: "swapping",
+          desc: `Swapped arr[${i}] and arr[${j}] since ${arr[j]} < pivot.`,
           comparisons,
           swaps
         });
@@ -202,7 +207,8 @@ function generateQuickSortSteps(initialArr) {
       swapping: [i + 1, high],
       pivot: i + 1,
       sorted: [i + 1],
-      desc: `Placed pivot ${pivotVal} into its final sorted position at index ${i + 1}.`,
+      codePhase: "swapping",
+      desc: `Placed pivot ${pivotVal} into final sorted position at index ${i + 1}.`,
       comparisons,
       swaps
     });
@@ -226,71 +232,8 @@ function generateQuickSortSteps(initialArr) {
     swapping: [],
     pivot: null,
     sorted: arr.map((_, i) => i),
-    desc: `✅ Quick Sort Complete! Partitioning finished.`,
-    comparisons,
-    swaps
-  });
-
-  return steps;
-}
-
-// Generate Bubble Sort Steps
-function generateBubbleSortSteps(initialArr) {
-  const steps = [];
-  const arr = [...initialArr];
-  const n = arr.length;
-  let comparisons = 0, swaps = 0;
-  const sortedIndices = [];
-
-  steps.push({
-    arr: [...arr],
-    comparing: [],
-    swapping: [],
-    sorted: [],
-    desc: "Starting Bubble Sort. Comparing adjacent pairs.",
-    comparisons,
-    swaps
-  });
-
-  for (let i = 0; i < n; i++) {
-    let swapped = false;
-    for (let j = 0; j < n - i - 1; j++) {
-      comparisons++;
-      steps.push({
-        arr: [...arr],
-        comparing: [j, j + 1],
-        swapping: [],
-        sorted: [...sortedIndices],
-        desc: `Comparing adjacent arr[${j}] (${arr[j]}) and arr[${j + 1}] (${arr[j + 1]}).`,
-        comparisons,
-        swaps
-      });
-
-      if (arr[j] > arr[j + 1]) {
-        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-        swapped = true;
-        swaps++;
-        steps.push({
-          arr: [...arr],
-          comparing: [],
-          swapping: [j, j + 1],
-          sorted: [...sortedIndices],
-          desc: `Swapping ${arr[j + 1]} and ${arr[j]} since ${arr[j + 1]} < ${arr[j]}.`,
-          comparisons,
-          swaps
-        });
-      }
-    }
-    sortedIndices.push(n - 1 - i);
-    if (!swapped) break;
-  }
-
-  steps.push({
-    arr: [...arr],
-    comparing: [],
-    swapping: [],
-    sorted: arr.map((_, i) => i),
-    desc: `✅ Bubble Sort Complete!`,
+    codePhase: "done",
+    desc: `✅ Quick Sort Complete!`,
     comparisons,
     swaps
   });
@@ -300,7 +243,10 @@ function generateBubbleSortSteps(initialArr) {
 
 const DEFAULT_ARRAY = [42, 12, 88, 25, 65, 34, 91, 18, 50, 7];
 
-export default function SortingViz({ algorithmId = "merge-sort" }) {
+export default function SortingViz({
+  algorithmId = "merge-sort",
+  mode = "simple"
+}) {
   const [arr, setArr] = useState(DEFAULT_ARRAY);
   const [customInput, setCustomInput] = useState(DEFAULT_ARRAY.join(", "));
   const [stepIdx, setStepIdx] = useState(0);
@@ -308,20 +254,16 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
   const [speed, setSpeed] = useState(1);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Generate steps based on selected algorithm
   const steps = useMemo(() => {
     if (algorithmId === "quick-sort") return generateQuickSortSteps(arr);
-    if (algorithmId === "bubble-sort") return generateBubbleSortSteps(arr);
     return generateMergeSortSteps(arr);
   }, [algorithmId, arr]);
 
-  // Reset step counter on array or algorithm switch
   useEffect(() => {
     setStepIdx(0);
     setIsPlaying(false);
   }, [arr, algorithmId]);
 
-  // Play audio frequency based on array values on each step
   useEffect(() => {
     if (!soundEnabled) return;
     const current = steps[stepIdx];
@@ -332,7 +274,6 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
     }
   }, [stepIdx, soundEnabled, steps]);
 
-  // Playback timer
   useEffect(() => {
     if (!isPlaying) return;
     if (stepIdx >= steps.length - 1) {
@@ -349,71 +290,64 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
   const maxVal = Math.max(...(currentStep?.arr || [100]));
 
   const handleApplyCustom = () => {
-    try {
-      const parsed = customInput
-        .split(/[,\s]+/)
-        .map(x => parseInt(x.trim(), 10))
-        .filter(x => !isNaN(x) && x >= 0);
-      if (parsed.length > 1) {
-        setArr(parsed);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    const parsed = customInput
+      .split(/[,\s]+/)
+      .map(x => parseInt(x.trim(), 10))
+      .filter(x => !isNaN(x) && x >= 0);
+    if (parsed.length > 1) setArr(parsed);
   };
 
   const handleRandomize = () => {
-    const len = Math.floor(Math.random() * 5) + 8;
+    const len = Math.floor(Math.random() * 4) + 7;
     const newArr = Array.from({ length: len }, () => Math.floor(Math.random() * 90) + 10);
     setArr(newArr);
     setCustomInput(newArr.join(", "));
   };
 
+  const liveVariables = useMemo(() => {
+    const vars = {
+      comparisons: currentStep?.comparisons || 0,
+      swaps: currentStep?.swaps || 0
+    };
+    if (currentStep?.comparing?.length) vars["comparing_idx"] = currentStep.comparing;
+    if (currentStep?.swapping?.length) vars["writing_idx"] = currentStep.swapping;
+    if (currentStep?.pivot !== null && currentStep?.pivot !== undefined) vars["pivot_idx"] = currentStep.pivot;
+    return vars;
+  }, [currentStep]);
+
+  const codeData = ALGORITHM_CODE_PHASES[algorithmId] || ALGORITHM_CODE_PHASES["merge-sort"];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Controls & Presets */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Controls Strip */}
       <div style={{
-        background: "#0d1321",
-        border: "1px solid #1a2740",
-        borderRadius: 12,
-        padding: "16px 20px",
+        background: "#0a0d16",
+        border: "1px solid #1a2035",
+        borderRadius: 10,
+        padding: "12px 16px",
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16
+        gap: 12
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
             onClick={handleRandomize}
             style={{
-              background: "#080b14",
+              background: "#0d1321",
               color: "#38bdf8",
               border: "1px solid #0284c744",
-              borderRadius: 6,
-              padding: "6px 14px",
-              fontSize: 12,
+              borderRadius: 5,
+              padding: "5px 12px",
+              fontSize: 11,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 4,
               cursor: "pointer"
             }}
           >
-            <Sparkles size={14} /> Randomize Array
-          </button>
-          <button
-            onClick={() => setArr([...DEFAULT_ARRAY].reverse())}
-            style={{
-              background: "#080b14",
-              color: "#f59e0b",
-              border: "1px solid #f59e0b44",
-              borderRadius: 6,
-              padding: "6px 12px",
-              fontSize: 12,
-              cursor: "pointer"
-            }}
-          >
-            Reversed (Worst-case)
+            <Sparkles size={12} /> Randomize
           </button>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
@@ -421,21 +355,20 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
               background: soundEnabled ? "#10b98122" : "#080b14",
               color: soundEnabled ? "#34d399" : "#64748b",
               border: `1px solid ${soundEnabled ? "#10b981" : "#1e293b"}`,
-              borderRadius: 6,
-              padding: "6px 12px",
-              fontSize: 12,
+              borderRadius: 5,
+              padding: "5px 10px",
+              fontSize: 11,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 4,
               cursor: "pointer"
             }}
           >
-            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
             Sound {soundEnabled ? "ON" : "OFF"}
           </button>
         </div>
 
-        {/* Custom Input */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <input
             type="text"
@@ -446,24 +379,24 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
             style={{
               background: "#080b14",
               border: "1px solid #1e293b",
-              borderRadius: 6,
+              borderRadius: 5,
               color: "#e2e8f0",
-              padding: "6px 12px",
-              fontSize: 12,
+              padding: "5px 10px",
+              fontSize: 11,
               fontFamily: "'JetBrains Mono', monospace",
-              width: 220
+              width: 180
             }}
           />
           <button
             onClick={handleApplyCustom}
             style={{
-              background: "#6366f1",
-              color: "#fff",
+              background: "#10b981",
+              color: "#080b14",
               border: "none",
-              borderRadius: 6,
-              padding: "6px 14px",
-              fontSize: 12,
-              fontWeight: 600,
+              borderRadius: 5,
+              padding: "5px 12px",
+              fontSize: 11,
+              fontWeight: 700,
               cursor: "pointer"
             }}
           >
@@ -472,266 +405,134 @@ export default function SortingViz({ algorithmId = "merge-sort" }) {
         </div>
       </div>
 
-      {/* Dynamic Animated Bars Visualization */}
+      {/* Main Grid: Split Layout in Advanced Mode */}
       <div style={{
-        background: "#0d1321",
-        border: "1px solid #1a2740",
-        borderRadius: 12,
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20
+        display: "grid",
+        gridTemplateColumns: mode === "advanced" ? "1fr 420px" : "1fr",
+        gap: 16
       }}>
-        {/* Top Header & Stats */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#94a3b8" }}>
-            <ArrowUpDown size={16} color="#10b981" />
-            ANIMATED ARRAY BARS
-          </div>
-
-          <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
-            <div>
-              <span style={{ color: "#64748b" }}>Comparisons: </span>
-              <span style={{ color: "#fbbf24", fontWeight: 700 }}>{currentStep?.comparisons || 0}</span>
-            </div>
-            <div>
-              <span style={{ color: "#64748b" }}>Swaps/Writes: </span>
-              <span style={{ color: "#ec4899", fontWeight: 700 }}>{currentStep?.swaps || 0}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Array Bars Container */}
+        {/* Left Column: Visual Array Bars */}
         <div style={{
-          height: 260,
-          background: "#080b14",
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          padding: "20px 24px 10px 24px",
+          background: "#0a0d16",
+          border: "1px solid #1a2035",
+          borderRadius: 10,
+          padding: "20px",
           display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-          gap: 12
+          flexDirection: "column",
+          gap: 16
         }}>
-          {currentStep?.arr.map((val, idx) => {
-            const isComparing = currentStep.comparing?.includes(idx);
-            const isSwapping = currentStep.swapping?.includes(idx);
-            const isPivot = currentStep.pivot === idx;
-            const isSorted = currentStep.sorted?.includes(idx);
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", fontWeight: 700 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <ArrowUpDown size={14} color="#10b981" /> ANIMATED ARRAY BARS
+            </span>
+            <div style={{ display: "flex", gap: 14 }}>
+              <span>Comparisons: <strong style={{ color: "#fbbf24" }}>{currentStep?.comparisons || 0}</strong></span>
+              <span>Swaps: <strong style={{ color: "#ec4899" }}>{currentStep?.swaps || 0}</strong></span>
+            </div>
+          </div>
 
-            let barColor = "#6366f1";
-            let glow = "none";
-            if (isSorted) {
-              barColor = "#10b981";
-            }
-            if (isPivot) {
-              barColor = "#06b6d4";
-              glow = "0 0 14px rgba(6, 182, 212, 0.6)";
-            }
-            if (isComparing) {
-              barColor = "#f59e0b";
-              glow = "0 0 14px rgba(245, 158, 11, 0.6)";
-            }
-            if (isSwapping) {
-              barColor = "#ec4899";
-              glow = "0 0 14px rgba(236, 72, 153, 0.6)";
-            }
+          {/* Bar chart canvas */}
+          <div style={{
+            height: 240,
+            background: "#080b14",
+            border: "1px solid #1e293b",
+            borderRadius: 6,
+            padding: "16px 20px 8px 20px",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            gap: 10
+          }}>
+            {currentStep?.arr.map((val, idx) => {
+              const isComparing = currentStep.comparing?.includes(idx);
+              const isSwapping = currentStep.swapping?.includes(idx);
+              const isPivot = currentStep.pivot === idx;
+              const isSorted = currentStep.sorted?.includes(idx);
 
-            const barHeightPct = Math.max(12, Math.round((val / maxVal) * 100));
+              let barColor = "#6366f1";
+              if (isSorted) barColor = "#10b981";
+              if (isPivot) barColor = "#06b6d4";
+              if (isComparing) barColor = "#f59e0b";
+              if (isSwapping) barColor = "#ec4899";
 
-            return (
-              <div
-                key={idx}
-                style={{
-                  flex: 1,
-                  maxWidth: 50,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  height: "100%",
-                  justifyContent: "flex-end",
-                  gap: 8
-                }}
-              >
-                {/* Bar Value on Top */}
-                <span style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: isComparing || isSwapping || isPivot ? "#fff" : "#94a3b8",
-                  transition: "color 0.2s"
-                }}>
-                  {val}
-                </span>
+              const barHeightPct = Math.max(12, Math.round((val / maxVal) * 100));
 
-                {/* Animated Bar */}
-                <div
-                  style={{
+              return (
+                <div key={idx} style={{ flex: 1, maxWidth: 46, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end", gap: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8" }}>{val}</span>
+                  <div style={{
                     width: "100%",
                     height: `${barHeightPct}%`,
                     background: barColor,
-                    borderRadius: "6px 6px 2px 2px",
-                    transition: "height 0.25s ease, background 0.25s ease, box-shadow 0.25s ease",
-                    boxShadow: glow
-                  }}
-                />
+                    borderRadius: "4px 4px 1px 1px",
+                    transition: "height 0.2s ease, background 0.2s ease"
+                  }} />
+                  <span style={{ fontSize: 9, color: "#475569" }}>{idx}</span>
+                </div>
+              );
+            })}
+          </div>
 
-                {/* Index label */}
-                <span style={{ fontSize: 10, color: "#475569", fontWeight: 600 }}>
-                  {idx}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: "#6366f1" }} />
-            <span style={{ color: "#94a3b8" }}>Default</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: "#f59e0b" }} />
-            <span style={{ color: "#94a3b8" }}>Comparing</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: "#ec4899" }} />
-            <span style={{ color: "#94a3b8" }}>Swapping / Writing</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: "#06b6d4" }} />
-            <span style={{ color: "#94a3b8" }}>Pivot</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: "#10b981" }} />
-            <span style={{ color: "#94a3b8" }}>Sorted</span>
+          <div style={{
+            background: "#080b14",
+            border: "1px solid #1e293b",
+            borderRadius: 6,
+            padding: "12px 14px",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#e2e8f0"
+          }}>
+            {currentStep?.desc}
           </div>
         </div>
 
-        {/* Step Commentary */}
-        <div style={{
-          background: "#080b14",
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          padding: "14px 18px",
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#e2e8f0"
-        }}>
-          {currentStep?.desc}
-        </div>
+        {/* Right Column: Code Stepper Panel */}
+        {mode === "advanced" && (
+          <CodeStepperPanel
+            codeLines={codeData}
+            activePhase={currentStep?.codePhase}
+            variables={liveVariables}
+            title={algorithmId}
+          />
+        )}
       </div>
 
-      {/* Playback Controls Strip */}
+      {/* Playback Controls Scrubber */}
       <div style={{
         background: "#0a0d16",
         border: "1px solid #1a2035",
-        borderRadius: 12,
-        padding: "12px 20px",
+        borderRadius: 10,
+        padding: "10px 16px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16
+        gap: 12
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => setStepIdx(0)}
-            title="Reset"
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: "#94a3b8",
-              padding: "8px 12px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            <RotateCcw size={14} /> Reset
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setStepIdx(0)} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: "#94a3b8", padding: "6px 10px", fontSize: 11, cursor: "pointer" }}>
+            <RotateCcw size={13} />
           </button>
-          <button
-            onClick={() => setStepIdx(i => Math.max(0, i - 1))}
-            disabled={stepIdx === 0}
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: stepIdx === 0 ? "#334155" : "#e2e8f0",
-              padding: "8px 12px",
-              cursor: stepIdx === 0 ? "not-allowed" : "pointer"
-            }}
-          >
-            <SkipBack size={14} />
+          <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: stepIdx === 0 ? "#334155" : "#e2e8f0", padding: "6px 10px", cursor: stepIdx === 0 ? "not-allowed" : "pointer" }}>
+            <SkipBack size={13} />
           </button>
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            style={{
-              background: isPlaying ? "#f59e0b" : "#10b981",
-              border: "none",
-              borderRadius: 6,
-              color: "#fff",
-              padding: "8px 18px",
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: isPlaying ? "#f59e0b" : "#10b981", border: "none", borderRadius: 5, color: "#080b14", padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
             {isPlaying ? "Pause" : "Sort"}
           </button>
-          <button
-            onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))}
-            disabled={stepIdx >= steps.length - 1}
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: stepIdx >= steps.length - 1 ? "#334155" : "#e2e8f0",
-              padding: "8px 12px",
-              cursor: stepIdx >= steps.length - 1 ? "not-allowed" : "pointer"
-            }}
-          >
-            <SkipForward size={14} />
+          <button onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))} disabled={stepIdx >= steps.length - 1} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: stepIdx >= steps.length - 1 ? "#334155" : "#e2e8f0", padding: "6px 10px", cursor: stepIdx >= steps.length - 1 ? "not-allowed" : "pointer" }}>
+            <SkipForward size={13} />
           </button>
         </div>
 
-        {/* Step Scrubber Slider */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, maxWidth: 380 }}>
-          <input
-            type="range"
-            min={0}
-            max={steps.length - 1}
-            value={stepIdx}
-            onChange={e => setStepIdx(parseInt(e.target.value, 10))}
-            style={{ flex: 1, accentColor: "#10b981", cursor: "pointer" }}
-          />
-          <span style={{ fontSize: 12, color: "#64748b", minWidth: 60, textAlign: "right" }}>
-            {stepIdx + 1} / {steps.length}
-          </span>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, maxWidth: 360 }}>
+          <input type="range" min={0} max={steps.length - 1} value={stepIdx} onChange={e => setStepIdx(parseInt(e.target.value, 10))} style={{ flex: 1, cursor: "pointer" }} />
+          <span style={{ fontSize: 11, color: "#64748b", minWidth: 50, textAlign: "right" }}>{stepIdx + 1} / {steps.length}</span>
         </div>
 
-        {/* Speed Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, color: "#64748b" }}>Speed:</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, color: "#64748b" }}>Speed:</span>
           {[0.5, 1, 2, 4].map(s => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              style={{
-                background: speed === s ? "#10b98122" : "transparent",
-                color: speed === s ? "#34d399" : "#64748b",
-                border: `1px solid ${speed === s ? "#10b981" : "transparent"}`,
-                borderRadius: 4,
-                padding: "2px 8px",
-                fontSize: 11,
-                cursor: "pointer"
-              }}
-            >
+            <button key={s} onClick={() => setSpeed(s)} style={{ background: speed === s ? "#10b98122" : "transparent", color: speed === s ? "#34d399" : "#64748b", border: `1px solid ${speed === s ? "#10b981" : "transparent"}`, borderRadius: 3, padding: "1px 6px", fontSize: 10, cursor: "pointer" }}>
               {s}x
             </button>
           ))}

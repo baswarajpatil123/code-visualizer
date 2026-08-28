@@ -1,74 +1,105 @@
 import React, { useState } from "react";
-import SimpleViz from "./visualizers/SimpleViz.jsx";
-import DeepViz from "./visualizers/DeepViz.jsx";
+import SubarrayViz from "./visualizers/SubarrayViz.jsx";
 import SortingViz from "./visualizers/SortingViz.jsx";
 import TreeGraphViz from "./visualizers/TreeGraphViz.jsx";
 import DynamicProgrammingViz from "./visualizers/DynamicProgrammingViz.jsx";
 import DataStructuresViz from "./visualizers/DataStructuresViz.jsx";
+import SimpleViz from "./visualizers/SimpleViz.jsx";
+import DeepViz from "./visualizers/DeepViz.jsx";
+import { 
+  Layers, ArrowDownUp, Network, Grid3X3, Box, 
+  Sparkles, Code2, ChevronDown
+} from "lucide-react";
 
-const VIEWS = [
+const ALGORITHMS_CATALOG = [
   {
-    id: "simple",
-    label: "Quick Visual",
-    icon: "⚡",
-    tag: "BEGINNER",
-    title: "Longest Equal Subarray",
-    desc: "Step through color-coded array cells with running sum & prefix map tracking",
-    component: SimpleViz,
+    id: "longest-equal-subarray",
+    categoryId: "subarrays",
+    categoryLabel: "Subarrays",
+    title: "Longest Equal Subarray (0s & 1s)",
+    tag: "LC 525",
+    difficulty: "Medium",
+    desc: "Map 0 to -1 and 1 to +1. Repeated prefix sums identify balanced subarrays.",
+    component: SubarrayViz
   },
   {
-    id: "deep",
-    label: "Deep Dive",
-    icon: "🔬",
-    tag: "ADVANCED",
-    title: "Prefix Sum & Python Breakdown",
-    desc: "Line-by-line Python execution + Dynamic area chart + Algorithm insights",
-    component: DeepViz,
+    id: "subarray-sum-k",
+    categoryId: "subarrays",
+    categoryLabel: "Subarrays",
+    title: "Subarray Sum Equals K",
+    tag: "LC 560",
+    difficulty: "Medium",
+    desc: "Count subarrays summing to K using prefix sum frequency map.",
+    component: SubarrayViz
   },
   {
-    id: "sorting",
-    label: "Sorting Studio",
-    icon: "📊",
-    tag: "ALGORITHMS",
-    title: "Merge, Quick & Bubble Sort",
-    desc: "Animated array bars with comparison/swap counters and audio synthesis",
-    component: SortingViz,
+    id: "kadane",
+    categoryId: "subarrays",
+    categoryLabel: "Subarrays",
+    title: "Kadane's (Max Subarray Sum)",
+    tag: "LC 53",
+    difficulty: "Medium",
+    desc: "Find contiguous subarray with maximum sum in O(N) linear time.",
+    component: SubarrayViz
   },
   {
-    id: "trees",
-    label: "Trees & BST",
-    icon: "🌳",
-    tag: "DATA STRUCTURES",
-    title: "Binary Search Tree Canvas",
-    desc: "Interactive SVG canvas with live Insert, Delete, Search, and In/Pre/Post/Level traversals",
-    component: TreeGraphViz,
+    id: "merge-sort",
+    categoryId: "sorting",
+    categoryLabel: "Sorting",
+    title: "Merge Sort",
+    tag: "O(N log N)",
+    difficulty: "Medium",
+    desc: "Divide and conquer array halves recursively and merge in sorted order.",
+    component: SortingViz
   },
   {
-    id: "dp",
-    label: "Dynamic Programming",
-    icon: "🧩",
-    tag: "DP MATRIX",
+    id: "quick-sort",
+    categoryId: "sorting",
+    categoryLabel: "Sorting",
+    title: "Quick Sort",
+    tag: "In-Place",
+    difficulty: "Medium",
+    desc: "Partition elements around a pivot and recursively sort partitions.",
+    component: SortingViz
+  },
+  {
+    id: "bst",
+    categoryId: "trees",
+    categoryLabel: "Trees",
+    title: "Binary Search Tree (BST)",
+    tag: "Tree Canvas",
+    difficulty: "Medium",
+    desc: "Interactive BST node operations and animated tree traversals.",
+    component: TreeGraphViz
+  },
+  {
+    id: "knapsack-01",
+    categoryId: "dp",
+    categoryLabel: "Dynamic Prog",
     title: "0/1 Knapsack Problem",
-    desc: "Interactive 2D DP matrix with item capacity calculation and optimal backtracking",
-    component: DynamicProgrammingViz,
+    tag: "2D Matrix",
+    difficulty: "Medium",
+    desc: "Compute max value with capacity W using 2D DP state table.",
+    component: DynamicProgrammingViz
   },
   {
-    id: "structures",
-    label: "Stack & Queue",
-    icon: "📦",
-    tag: "CORE STRUCTURES",
-    title: "Stack, Queue & Binary Search",
-    desc: "LIFO vertical stack frames, FIFO horizontal line, and Binary Search pointers",
-    component: DataStructuresViz,
-  },
+    id: "binary-search",
+    categoryId: "structures",
+    categoryLabel: "Structures",
+    title: "Binary Search & Pointers",
+    tag: "O(log N)",
+    difficulty: "Easy",
+    desc: "Low, Mid, High pointer tracking in sorted array with Stack/Queue ops.",
+    component: DataStructuresViz
+  }
 ];
 
 export default function App() {
-  const [active, setActive] = useState("simple");
-  const [showPicker, setShowPicker] = useState(false);
+  const [activeAlgoId, setActiveAlgoId] = useState("longest-equal-subarray");
+  const [viewMode, setViewMode] = useState("advanced"); // "simple" or "advanced"
 
-  const activeViewObj = VIEWS.find(v => v.id === active) || VIEWS[0];
-  const ActiveComponent = activeViewObj.component;
+  const currentAlgo = ALGORITHMS_CATALOG.find(a => a.id === activeAlgoId) || ALGORITHMS_CATALOG[0];
+  const ComponentToRender = currentAlgo.component;
 
   return (
     <div style={{
@@ -77,163 +108,170 @@ export default function App() {
       color: "#e2e8f0",
       fontFamily: "'JetBrains Mono','Fira Code','Courier New',monospace"
     }}>
-      {/* Top Navigation Bar */}
-      <nav style={{
+      {/* Top Sticky Navigation Bar */}
+      <header style={{
         background: "#0a0d16",
         borderBottom: "1px solid #1a2035",
-        padding: "0 16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        height: 48,
+        padding: "0 20px",
+        height: 50,
         position: "sticky",
         top: 0,
         zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16
       }}>
-        {/* Brand label & mode picker toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            onClick={() => setShowPicker(true)}
-            style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: 13,
-              fontWeight: 800,
-              color: "#e2e8f0",
-              letterSpacing: 1,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              cursor: "pointer",
-              whiteSpace: "nowrap"
-            }}
-          >
-            <span style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#6366f1",
-              boxShadow: "0 0 8px #6366f1"
-            }} />
-            CODE VISUALIZER
-          </div>
-        </div>
-
-        {/* View Selection Tabs */}
-        <div style={{ display: "flex", height: "100%", overflowX: "auto", scrollbarWidth: "none" }}>
-          {VIEWS.map(v => {
-            const isCurrent = active === v.id;
-            return (
-              <button
-                key={v.id}
-                onClick={() => { setActive(v.id); setShowPicker(false); }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: isCurrent ? "#e2e8f0" : "#4a5a70",
-                  padding: "0 12px",
-                  height: "100%",
-                  borderBottom: isCurrent ? "2px solid #6366f1" : "2px solid transparent",
-                  letterSpacing: 0.5,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  transition: "all 0.15s",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span>{v.icon}</span>
-                <span>{v.label}</span>
-                <span style={{
-                  fontSize: 8,
-                  background: isCurrent ? "#6366f122" : "#0d1321",
-                  color: isCurrent ? "#818cf8" : "#2d3f60",
-                  border: `1px solid ${isCurrent ? "#6366f144" : "#1a2035"}`,
-                  borderRadius: 3,
-                  padding: "1px 5px",
-                  letterSpacing: 0.5,
-                }}>
-                  {v.tag}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      {/* Mode Picker Overlay Modal (triggered on logo click or optional) */}
-      {showPicker && (
-        <div
-          onClick={() => setShowPicker(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            top: 48,
-            background: "#080b14dd",
-            backdropFilter: "blur(8px)",
-            zIndex: 50,
+        {/* Brand */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            background: "linear-gradient(135deg, #6366f1, #06b6d4)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 720, width: "100%" }}
-          >
-            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 24, fontWeight: 800, color: "#e2e8f0", textAlign: "center", marginBottom: 6 }}>
-              Select Visualizer
-            </div>
-            <div style={{ fontSize: 11, color: "#4a5a70", textAlign: "center", marginBottom: 24, letterSpacing: 1 }}>
-              EXPLORE ALGORITHMS & DATA STRUCTURES
-            </div>
+            boxShadow: "0 0 10px rgba(99, 102, 241, 0.4)"
+          }}>
+            <Code2 size={15} color="#fff" />
+          </div>
+          <span style={{
+            fontFamily: "'Syne', sans-serif",
+            fontSize: 14,
+            fontWeight: 800,
+            color: "#e2e8f0",
+            letterSpacing: 0.5,
+            whiteSpace: "nowrap"
+          }}>
+            CODE VISUALIZER
+          </span>
+        </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
-              {VIEWS.map(v => (
-                <button
-                  key={v.id}
-                  onClick={() => { setActive(v.id); setShowPicker(false); }}
-                  style={{
-                    background: active === v.id ? "#0f1528" : "#0d1321",
-                    border: `1px solid ${active === v.id ? "#6366f1" : "#1a2740"}`,
-                    borderRadius: 10,
-                    padding: "18px 16px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontFamily: "inherit",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.background = "#0f1528"; }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = active === v.id ? "#6366f1" : "#1a2740";
-                    e.currentTarget.style.background = active === v.id ? "#0f1528" : "#0d1321";
-                  }}
-                >
-                  <div style={{ fontSize: 26, marginBottom: 8 }}>{v.icon}</div>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, color: "#e2e8f0", marginBottom: 3 }}>
-                    {v.label}
-                  </div>
-                  <div style={{ fontSize: 9, color: "#818cf8", letterSpacing: 1, marginBottom: 8 }}>
-                    {v.tag}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
-                    {v.desc}
-                  </div>
-                </button>
+        {/* Algorithm Dropdown Quick Switcher */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative" }}>
+            <select
+              value={activeAlgoId}
+              onChange={e => setActiveAlgoId(e.target.value)}
+              style={{
+                background: "#0d1321",
+                border: "1px solid #1e293b",
+                borderRadius: 6,
+                color: "#e2e8f0",
+                padding: "6px 28px 6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                appearance: "none",
+                outline: "none"
+              }}
+            >
+              {ALGORITHMS_CATALOG.map(algo => (
+                <option key={algo.id} value={algo.id}>
+                  [{algo.categoryLabel}] {algo.title}
+                </option>
               ))}
-            </div>
+            </select>
+            <ChevronDown size={14} color="#818cf8" style={{ position: "absolute", right: 8, top: 10, pointerEvents: "none" }} />
+          </div>
+
+          {/* Simple vs Advanced (Side-by-Side Code) Mode Switcher */}
+          <div style={{
+            display: "flex",
+            background: "#080b14",
+            border: "1px solid #1a2035",
+            borderRadius: 6,
+            padding: 2
+          }}>
+            <button
+              onClick={() => setViewMode("simple")}
+              style={{
+                background: viewMode === "simple" ? "#6366f1" : "transparent",
+                color: viewMode === "simple" ? "#fff" : "#64748b",
+                border: "none",
+                borderRadius: 4,
+                padding: "5px 12px",
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                transition: "all 0.15s"
+              }}
+            >
+              ⚡ Simple View
+            </button>
+            <button
+              onClick={() => setViewMode("advanced")}
+              style={{
+                background: viewMode === "advanced" ? "#6366f1" : "transparent",
+                color: viewMode === "advanced" ? "#fff" : "#64748b",
+                border: "none",
+                borderRadius: 4,
+                padding: "5px 12px",
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                transition: "all 0.15s"
+              }}
+            >
+              🔬 Advanced (Code Side-by-Side)
+            </button>
           </div>
         </div>
-      )}
+      </header>
 
-      {/* Active Visualizer View */}
-      <div style={{ padding: "16px 20px" }}>
-        <ActiveComponent />
-      </div>
+      {/* Main Algorithm Viewport */}
+      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "20px" }}>
+        {/* Header Info */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 10
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h1 style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 18,
+              fontWeight: 800,
+              color: "#e2e8f0",
+              margin: 0
+            }}>
+              {currentAlgo.title}
+            </h1>
+            <span style={{
+              fontSize: 10,
+              background: "#6366f122",
+              color: "#818cf8",
+              border: "1px solid #6366f144",
+              borderRadius: 4,
+              padding: "2px 6px",
+              fontWeight: 700
+            }}>
+              {currentAlgo.tag}
+            </span>
+          </div>
+
+          <div style={{ fontSize: 11, color: "#64748b" }}>
+            {viewMode === "advanced" ? "Synchronized Live Code Stepper Active" : "Simplified Visual Only Mode"}
+          </div>
+        </div>
+
+        {/* Render Active Algorithm with Mode Prop */}
+        <ComponentToRender
+          algorithmId={currentAlgo.id}
+          mode={viewMode}
+        />
+      </main>
     </div>
   );
 }

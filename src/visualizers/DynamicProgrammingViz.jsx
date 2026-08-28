@@ -1,25 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, Grid3X3, CheckCircle2 } from "lucide-react";
+import CodeStepperPanel from "../components/CodeStepperPanel.jsx";
+import { ALGORITHM_CODE_PHASES } from "../data/algorithmsData.js";
 
 const KNAPSACK_PRESETS = [
-  {
-    label: "Classic (W=7)",
-    weights: [1, 3, 4, 5],
-    values: [1, 4, 5, 7],
-    capacity: 7
-  },
-  {
-    label: "Small (W=5)",
-    weights: [2, 1, 3, 2],
-    values: [12, 10, 20, 15],
-    capacity: 5
-  },
-  {
-    label: "Uniform (W=6)",
-    weights: [2, 3, 4],
-    values: [3, 4, 5],
-    capacity: 6
-  }
+  { label: "Classic (W=7)", weights: [1, 3, 4, 5], values: [1, 4, 5, 7], capacity: 7 },
+  { label: "Small (W=5)", weights: [2, 1, 3, 2], values: [12, 10, 20, 15], capacity: 5 }
 ];
 
 function generateKnapsackSteps(weights, values, capacity) {
@@ -35,6 +21,7 @@ function generateKnapsackSteps(weights, values, capacity) {
     dependExclude: null,
     dependInclude: null,
     chosen: null,
+    codePhase: "init",
     desc: "Initialize DP table with base case: 0 items or 0 capacity yields 0 value.",
     formula: "dp[0][w] = 0 and dp[i][0] = 0"
   });
@@ -77,11 +64,10 @@ function generateKnapsackSteps(weights, values, capacity) {
         excludeVal,
         includeVal,
         chosen,
+        codePhase: chosen === "include" ? "include" : "exclude",
         desc: chosen === "include"
-          ? `Item ${i} (wt=${wt}, val=${val}) INCLUDED! dp[${i}][${w}] = ${val} + dp[${i-1}][${w-wt}] (${val} + ${dp[i-1][w-wt]}) = ${dp[i][w]}.`
-          : chosen === "exclude"
-          ? `Item ${i} (wt=${wt}, val=${val}) EXCLUDED: Exclude value (${excludeVal}) >= Include value (${includeVal}).`
-          : `Item ${i} (wt=${wt}) is heavier than current capacity ${w} → Must exclude (carry over ${excludeVal}).`,
+          ? `Item ${i} (wt=${wt}, val=${val}) INCLUDED! dp[${i}][${w}] = ${val} + dp[${i-1}][${w-wt}] = ${dp[i][w]}.`
+          : `Item ${i} (wt=${wt}) EXCLUDED: dp[${i}][${w}] = ${dp[i][w]}.`,
         formula: wt <= w 
           ? `dp[${i}][${w}] = max(${val} + dp[${i-1}][${w-wt}], dp[${i-1}][${w}]) = ${dp[i][w]}` 
           : `dp[${i}][${w}] = dp[${i-1}][${w}] = ${dp[i][w]}`
@@ -89,7 +75,6 @@ function generateKnapsackSteps(weights, values, capacity) {
     }
   }
 
-  // Backtrack selected items
   const selectedItems = [];
   let curW = W;
   for (let i = n; i > 0; i--) {
@@ -104,14 +89,18 @@ function generateKnapsackSteps(weights, values, capacity) {
     activeI: n,
     activeW: W,
     selectedItems,
-    desc: `✅ Maximum Knapsack Value is ${dp[n][W]} with capacity ${W}! Backtracking optimal items.`,
-    formula: `Optimal items: ${selectedItems.map(it => `Item ${it.item} (val=${it.value})`).join(", ")}`
+    codePhase: "done",
+    desc: `✅ Max Knapsack Value = ${dp[n][W]} with capacity ${W}.`,
+    formula: `Selected items: ${selectedItems.map(it => `Item ${it.item} (val=${it.value})`).join(", ")}`
   });
 
   return steps;
 }
 
-export default function DynamicProgrammingViz() {
+export default function DynamicProgrammingViz({
+  algorithmId = "knapsack-01",
+  mode = "simple"
+}) {
   const [presetIdx, setPresetIdx] = useState(0);
   const currentPreset = KNAPSACK_PRESETS[presetIdx];
   const [weights, setWeights] = useState(currentPreset.weights);
@@ -121,9 +110,7 @@ export default function DynamicProgrammingViz() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
 
-  const steps = useMemo(() => {
-    return generateKnapsackSteps(weights, values, capacity);
-  }, [weights, values, capacity]);
+  const steps = useMemo(() => generateKnapsackSteps(weights, values, capacity), [weights, values, capacity]);
 
   useEffect(() => {
     setStepIdx(0);
@@ -144,38 +131,44 @@ export default function DynamicProgrammingViz() {
 
   const currentStep = steps[stepIdx] || steps[0];
 
+  const liveVariables = useMemo(() => {
+    const vars = {};
+    if (currentStep?.activeI !== undefined) vars["i (item)"] = currentStep.activeI;
+    if (currentStep?.activeW !== undefined) vars["w (cap)"] = currentStep.activeW;
+    if (currentStep?.wt !== undefined) vars["weight"] = currentStep.wt;
+    if (currentStep?.val !== undefined) vars["value"] = currentStep.val;
+    return vars;
+  }, [currentStep]);
+
+  const codeData = ALGORITHM_CODE_PHASES["knapsack-01"];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Preset Control Strip */}
       <div style={{
-        background: "#0d1321",
-        border: "1px solid #1a2740",
-        borderRadius: 12,
-        padding: "16px 20px",
+        background: "#0a0d16",
+        border: "1px solid #1a2035",
+        borderRadius: 10,
+        padding: "12px 16px",
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16
+        gap: 12
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Presets:</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>PRESETS:</span>
           {KNAPSACK_PRESETS.map((p, idx) => (
             <button
               key={idx}
-              onClick={() => {
-                setPresetIdx(idx);
-                setWeights(p.weights);
-                setValues(p.values);
-                setCapacity(p.capacity);
-              }}
+              onClick={() => { setPresetIdx(idx); setWeights(p.weights); setValues(p.values); setCapacity(p.capacity); }}
               style={{
-                background: presetIdx === idx ? "#ec489922" : "#080b14",
+                background: presetIdx === idx ? "#ec489922" : "#0d1321",
                 color: presetIdx === idx ? "#f472b6" : "#94a3b8",
                 border: `1px solid ${presetIdx === idx ? "#ec4899" : "#1e293b"}`,
-                borderRadius: 6,
-                padding: "6px 12px",
-                fontSize: 12,
+                borderRadius: 5,
+                padding: "5px 10px",
+                fontSize: 11,
                 cursor: "pointer"
               }}
             >
@@ -184,296 +177,130 @@ export default function DynamicProgrammingViz() {
           ))}
         </div>
 
-        {/* Capacity Input */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, color: "#64748b" }}>Capacity (W):</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: "#64748b" }}>Capacity:</span>
           <input
             type="number"
             min={1}
-            max={12}
+            max={10}
             value={capacity}
             onChange={e => setCapacity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-            style={{
-              background: "#080b14",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: "#ec4899",
-              padding: "6px 10px",
-              fontSize: 12,
-              fontWeight: 700,
-              width: 60,
-              textAlign: "center"
-            }}
+            style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 5, color: "#ec4899", padding: "5px 8px", fontSize: 11, width: 50, textAlign: "center", fontWeight: 700 }}
           />
         </div>
       </div>
 
-      {/* 2D DP Matrix Visualizer */}
+      {/* Main Grid: Split Layout in Advanced Mode */}
       <div style={{
-        background: "#0d1321",
-        border: "1px solid #1a2740",
-        borderRadius: 12,
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
+        display: "grid",
+        gridTemplateColumns: mode === "advanced" ? "1fr 420px" : "1fr",
         gap: 16
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#94a3b8" }}>
-            <Grid3X3 size={16} color="#ec4899" />
-            2D DYNAMIC PROGRAMMING MATRIX [Item × Capacity]
+        {/* Left Column: 2D DP Matrix Visualizer */}
+        <div style={{
+          background: "#0a0d16",
+          border: "1px solid #1a2035",
+          borderRadius: 10,
+          padding: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", fontWeight: 700 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Grid3X3 size={14} color="#ec4899" /> 2D DP MATRIX [Item × Capacity]
+            </span>
+            <span>Step {stepIdx + 1} of {steps.length}</span>
           </div>
 
-          <span style={{ fontSize: 12, color: "#64748b" }}>
-            Step {stepIdx + 1} of {steps.length}
-          </span>
-        </div>
-
-        {/* DP Table */}
-        <div style={{ overflowX: "auto", padding: "8px 0" }}>
-          <table style={{ borderCollapse: "separate", borderSpacing: "6px", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ color: "#64748b", fontSize: 11, padding: 8, textAlign: "left" }}>Item \ Cap</th>
-                {Array.from({ length: capacity + 1 }).map((_, c) => (
-                  <th
-                    key={c}
-                    style={{
-                      color: currentStep?.activeW === c ? "#ec4899" : "#64748b",
-                      fontSize: 11,
-                      padding: "8px 12px",
-                      textAlign: "center",
-                      background: currentStep?.activeW === c ? "#ec489911" : "transparent",
-                      borderRadius: 4
-                    }}
-                  >
-                    W={c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {currentStep?.dp.map((row, rIdx) => {
-                const isCurrentRow = currentStep.activeI === rIdx;
-                const rowLabel = rIdx === 0 ? "None" : `Item ${rIdx} (wt=${weights[rIdx - 1]}, val=${values[rIdx - 1]})`;
-
-                return (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "separate", borderSpacing: "5px", width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ color: "#64748b", fontSize: 10, padding: 6, textAlign: "left" }}>Item \ Cap</th>
+                  {Array.from({ length: capacity + 1 }).map((_, c) => (
+                    <th key={c} style={{ color: currentStep?.activeW === c ? "#ec4899" : "#64748b", fontSize: 10, padding: "6px 8px", textAlign: "center" }}>
+                      W={c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {currentStep?.dp.map((row, rIdx) => (
                   <tr key={rIdx}>
-                    <td style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: isCurrentRow ? "#f472b6" : "#94a3b8",
-                      padding: "8px 12px",
-                      whiteSpace: "nowrap",
-                      background: isCurrentRow ? "#ec489911" : "transparent",
-                      borderRadius: 4
-                    }}>
-                      {rowLabel}
+                    <td style={{ fontSize: 11, color: currentStep.activeI === rIdx ? "#f472b6" : "#94a3b8", padding: "6px 8px", whiteSpace: "nowrap" }}>
+                      {rIdx === 0 ? "0 (None)" : `It ${rIdx} (wt=${weights[rIdx-1]}, v=${values[rIdx-1]})`}
                     </td>
-
                     {row.map((cellVal, cIdx) => {
-                      const isActiveCell = currentStep.activeI === rIdx && currentStep.activeW === cIdx;
-                      const isExcludeDep = currentStep.dependExclude?.r === rIdx && currentStep.dependExclude?.c === cIdx;
-                      const isIncludeDep = currentStep.dependInclude?.r === rIdx && currentStep.dependInclude?.c === cIdx;
-
-                      let cellBg = "#080b14";
-                      let border = "1px solid #1e293b";
-                      let textColor = "#64748b";
-
-                      if (cellVal > 0) textColor = "#e2e8f0";
-
-                      if (isExcludeDep) {
-                        cellBg = "#38bdf822";
-                        border = "2px solid #38bdf8";
-                        textColor = "#38bdf8";
-                      }
-                      if (isIncludeDep) {
-                        cellBg = "#10b98122";
-                        border = "2px solid #10b981";
-                        textColor = "#34d399";
-                      }
-                      if (isActiveCell) {
-                        cellBg = "#ec489933";
-                        border = "2px solid #ec4899";
-                        textColor = "#f472b6";
-                      }
-
+                      const isActive = currentStep.activeI === rIdx && currentStep.activeW === cIdx;
+                      let bg = "#080b14", border = "1px solid #1e293b", color = "#64748b";
+                      if (cellVal > 0) color = "#e2e8f0";
+                      if (isActive) { bg = "#ec489933"; border = "2px solid #ec4899"; color = "#f472b6"; }
                       return (
-                        <td
-                          key={cIdx}
-                          style={{
-                            textAlign: "center",
-                            padding: "10px 14px",
-                            background: cellBg,
-                            border,
-                            borderRadius: 6,
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: textColor,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
+                        <td key={cIdx} style={{ textAlign: "center", padding: "8px 10px", background: bg, border, borderRadius: 5, fontSize: 12, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>
                           {cellVal}
                         </td>
                       );
                     })}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Step Formula & Explanation */}
-        <div style={{
-          background: "#080b14",
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          padding: "14px 18px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>
-            {currentStep?.desc}
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div style={{ fontSize: 12, color: "#f472b6", fontFamily: "'JetBrains Mono', monospace" }}>
-            {currentStep?.formula}
-          </div>
-        </div>
 
-        {/* Backtracked optimal items if complete */}
-        {currentStep?.selectedItems && (
-          <div style={{
-            background: "#10b98111",
-            border: "1px solid #10b981",
-            borderRadius: 8,
-            padding: "12px 18px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12
-          }}>
-            <CheckCircle2 size={20} color="#10b981" />
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>
-                SELECTED KNAPSACK ITEMS:
-              </div>
-              <div style={{ fontSize: 12, color: "#e2e8f0", marginTop: 2 }}>
-                {currentStep.selectedItems.map(it => `Item ${it.item} (Weight: ${it.weight}, Value: ${it.value})`).join(" + ")}
+          <div style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 6, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{currentStep?.desc}</div>
+            <div style={{ fontSize: 11, color: "#f472b6", fontFamily: "'JetBrains Mono', monospace" }}>{currentStep?.formula}</div>
+          </div>
+
+          {currentStep?.selectedItems && (
+            <div style={{ background: "#10b98111", border: "1px solid #10b981", borderRadius: 6, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <CheckCircle2 size={16} color="#10b981" />
+              <div style={{ fontSize: 11, color: "#34d399", fontWeight: 700 }}>
+                OPTIMAL ITEMS: {currentStep.selectedItems.map(it => `Item ${it.item} (val=${it.value})`).join(" + ")}
               </div>
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Right Column: Code Stepper Panel */}
+        {mode === "advanced" && (
+          <CodeStepperPanel
+            codeLines={codeData}
+            activePhase={currentStep?.codePhase}
+            variables={liveVariables}
+            title="0/1 Knapsack DP"
+          />
         )}
       </div>
 
       {/* Playback Controls */}
-      <div style={{
-        background: "#0a0d16",
-        border: "1px solid #1a2035",
-        borderRadius: 12,
-        padding: "12px 20px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => setStepIdx(0)}
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: "#94a3b8",
-              padding: "8px 12px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            <RotateCcw size={14} /> Reset
+      <div style={{ background: "#0a0d16", border: "1px solid #1a2035", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setStepIdx(0)} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: "#94a3b8", padding: "6px 10px", fontSize: 11, cursor: "pointer" }}>
+            <RotateCcw size={13} />
           </button>
-          <button
-            onClick={() => setStepIdx(i => Math.max(0, i - 1))}
-            disabled={stepIdx === 0}
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: stepIdx === 0 ? "#334155" : "#e2e8f0",
-              padding: "8px 12px",
-              cursor: stepIdx === 0 ? "not-allowed" : "pointer"
-            }}
-          >
-            <SkipBack size={14} />
+          <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: stepIdx === 0 ? "#334155" : "#e2e8f0", padding: "6px 10px", cursor: stepIdx === 0 ? "not-allowed" : "pointer" }}>
+            <SkipBack size={13} />
           </button>
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            style={{
-              background: isPlaying ? "#f59e0b" : "#ec4899",
-              border: "none",
-              borderRadius: 6,
-              color: "#fff",
-              padding: "8px 18px",
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: isPlaying ? "#f59e0b" : "#ec4899", border: "none", borderRadius: 5, color: "#fff", padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
             {isPlaying ? "Pause" : "Solve DP"}
           </button>
-          <button
-            onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))}
-            disabled={stepIdx >= steps.length - 1}
-            style={{
-              background: "#0d1321",
-              border: "1px solid #1e293b",
-              borderRadius: 6,
-              color: stepIdx >= steps.length - 1 ? "#334155" : "#e2e8f0",
-              padding: "8px 12px",
-              cursor: stepIdx >= steps.length - 1 ? "not-allowed" : "pointer"
-            }}
-          >
-            <SkipForward size={14} />
+          <button onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))} disabled={stepIdx >= steps.length - 1} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 5, color: stepIdx >= steps.length - 1 ? "#334155" : "#e2e8f0", padding: "6px 10px", cursor: stepIdx >= steps.length - 1 ? "not-allowed" : "pointer" }}>
+            <SkipForward size={13} />
           </button>
         </div>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, maxWidth: 380 }}>
-          <input
-            type="range"
-            min={0}
-            max={steps.length - 1}
-            value={stepIdx}
-            onChange={e => setStepIdx(parseInt(e.target.value, 10))}
-            style={{ flex: 1, accentColor: "#ec4899", cursor: "pointer" }}
-          />
-          <span style={{ fontSize: 12, color: "#64748b", minWidth: 60, textAlign: "right" }}>
-            {stepIdx + 1} / {steps.length}
-          </span>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, maxWidth: 360 }}>
+          <input type="range" min={0} max={steps.length - 1} value={stepIdx} onChange={e => setStepIdx(parseInt(e.target.value, 10))} style={{ flex: 1, cursor: "pointer" }} />
+          <span style={{ fontSize: 11, color: "#64748b", minWidth: 50, textAlign: "right" }}>{stepIdx + 1} / {steps.length}</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, color: "#64748b" }}>Speed:</span>
-          {[0.5, 1, 2, 4].map(s => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              style={{
-                background: speed === s ? "#ec489922" : "transparent",
-                color: speed === s ? "#f472b6" : "#64748b",
-                border: `1px solid ${speed === s ? "#ec4899" : "transparent"}`,
-                borderRadius: 4,
-                padding: "2px 8px",
-                fontSize: 11,
-                cursor: "pointer"
-              }}
-            >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, color: "#64748b" }}>Speed:</span>
+          {[0.5, 1, 2].map(s => (
+            <button key={s} onClick={() => setSpeed(s)} style={{ background: speed === s ? "#ec489922" : "transparent", color: speed === s ? "#f472b6" : "#64748b", border: `1px solid ${speed === s ? "#ec4899" : "transparent"}`, borderRadius: 3, padding: "1px 6px", fontSize: 10, cursor: "pointer" }}>
               {s}x
             </button>
           ))}

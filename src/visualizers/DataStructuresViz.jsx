@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Box, ArrowRight, CornerLeftDown, Sparkles } from "lucide-react";
-import confetti from "canvas-confetti";
+import { Play, Pause, SkipForward, SkipBack, RotateCcw } from "lucide-react";
+import CodeStepperPanel from "../components/CodeStepperPanel.jsx";
+import { ALGORITHM_CODE_PHASES } from "../data/algorithmsData.js";
 
-export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
-  // Mode toggle: "stack", "queue", "binary-search"
-  const [subMode, setSubMode] = useState(algorithmId === "binary-search" ? "binary-search" : "stack");
+export default function DataStructuresViz({
+  algorithmId = "binary-search",
+  mode = "simple"
+}) {
+  const [subMode, setSubMode] = useState("binary-search");
 
   // Stack state
   const [stackItems, setStackItems] = useState([10, 25, 40, 85]);
@@ -22,7 +25,6 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
   const [bsStepIdx, setBsStepIdx] = useState(0);
   const [bsPlaying, setBsPlaying] = useState(false);
 
-  // Generate Binary Search Steps
   const bsSteps = useMemo(() => {
     const steps = [];
     let low = 0, high = bsArray.length - 1;
@@ -33,6 +35,7 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
       high,
       mid: Math.floor((low + high) / 2),
       status: "init",
+      codePhase: "init",
       desc: `Search target ${targetVal} within range [0..${high}].`
     });
 
@@ -46,6 +49,7 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
           high,
           mid,
           status: "found",
+          codePhase: "found",
           desc: `🎯 Target ${targetVal} FOUND at index ${mid}!`
         });
         found = true;
@@ -56,7 +60,8 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
           high,
           mid,
           status: "too_low",
-          desc: `arr[mid=${mid}] (${midVal}) < target (${targetVal}) → Adjusting low = ${mid + 1}.`
+          codePhase: "too_low",
+          desc: `arr[${mid}] (${midVal}) < ${targetVal} → low = ${mid + 1}.`
         });
         low = mid + 1;
       } else {
@@ -65,7 +70,8 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
           high,
           mid,
           status: "too_high",
-          desc: `arr[mid=${mid}] (${midVal}) > target (${targetVal}) → Adjusting high = ${mid - 1}.`
+          codePhase: "too_high",
+          desc: `arr[${mid}] (${midVal}) > ${targetVal} → high = ${mid - 1}.`
         });
         high = mid - 1;
       }
@@ -77,7 +83,8 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
         high,
         mid: -1,
         status: "not_found",
-        desc: `❌ Target ${targetVal} does not exist in array (low > high).`
+        codePhase: "not_found",
+        desc: `❌ Target ${targetVal} not found in array.`
       });
     }
 
@@ -101,54 +108,28 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
     return () => clearTimeout(interval);
   }, [bsPlaying, bsStepIdx, bsSteps.length]);
 
-  // Trigger confetti on binary search found
   const curBsStep = bsSteps[bsStepIdx] || bsSteps[0];
-  useEffect(() => {
-    if (curBsStep?.status === "found") {
-      try { confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } }); } catch (e) {}
-    }
-  }, [curBsStep?.status]);
 
-  // Stack operations
   const handlePush = () => {
     const v = parseInt(stackInput, 10);
-    if (!isNaN(v)) {
-      if (stackItems.length >= 8) {
-        setStackMessage("⚠️ Stack Overflow: Maximum capacity reached.");
-        return;
-      }
+    if (!isNaN(v) && stackItems.length < 8) {
       setStackItems([...stackItems, v]);
-      setStackMessage(`Pushed ${v} onto stack. Top of stack is now ${v}.`);
+      setStackMessage(`Pushed ${v} onto stack.`);
       setStackInput("");
     }
   };
 
   const handlePop = () => {
-    if (stackItems.length === 0) {
-      setStackMessage("⚠️ Stack Underflow: Stack is empty.");
-      return;
+    if (stackItems.length > 0) {
+      const popped = stackItems[stackItems.length - 1];
+      setStackItems(stackItems.slice(0, -1));
+      setStackMessage(`Popped ${popped} from stack.`);
     }
-    const popped = stackItems[stackItems.length - 1];
-    setStackItems(stackItems.slice(0, -1));
-    setStackMessage(`Popped ${popped} from stack.`);
   };
 
-  const handlePeek = () => {
-    if (stackItems.length === 0) {
-      setStackMessage("Stack is empty. Nothing to peek.");
-      return;
-    }
-    setStackMessage(`Top element is ${stackItems[stackItems.length - 1]}.`);
-  };
-
-  // Queue operations
   const handleEnqueue = () => {
     const v = parseInt(queueInput, 10);
-    if (!isNaN(v)) {
-      if (queueItems.length >= 8) {
-        setQueueMessage("⚠️ Queue Overflow: Queue is full.");
-        return;
-      }
+    if (!isNaN(v) && queueItems.length < 8) {
       setQueueItems([...queueItems, v]);
       setQueueMessage(`Enqueued ${v} to rear.`);
       setQueueInput("");
@@ -156,542 +137,203 @@ export default function DataStructuresViz({ algorithmId = "stack-queue" }) {
   };
 
   const handleDequeue = () => {
-    if (queueItems.length === 0) {
-      setQueueMessage("⚠️ Queue Underflow: Queue is empty.");
-      return;
+    if (queueItems.length > 0) {
+      const dequeued = queueItems[0];
+      setQueueItems(queueItems.slice(1));
+      setQueueMessage(`Dequeued ${dequeued} from front.`);
     }
-    const dequeued = queueItems[0];
-    setQueueItems(queueItems.slice(1));
-    setQueueMessage(`Dequeued ${dequeued} from front.`);
   };
 
+  const liveVariables = useMemo(() => {
+    const vars = { target: targetVal };
+    if (curBsStep?.low !== undefined) vars["low"] = curBsStep.low;
+    if (curBsStep?.mid !== undefined) vars["mid"] = curBsStep.mid;
+    if (curBsStep?.high !== undefined) vars["high"] = curBsStep.high;
+    if (curBsStep?.mid >= 0 && bsArray[curBsStep.mid] !== undefined) vars["nums[mid]"] = bsArray[curBsStep.mid];
+    return vars;
+  }, [curBsStep, targetVal, bsArray]);
+
+  const codeData = ALGORITHM_CODE_PHASES["binary-search"];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Submode Switcher Tabs */}
       <div style={{
-        background: "#0d1321",
-        border: "1px solid #1a2740",
-        borderRadius: 12,
-        padding: "12px 16px",
+        background: "#0a0d16",
+        border: "1px solid #1a2035",
+        borderRadius: 10,
+        padding: "10px 14px",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12
+        gap: 8
       }}>
-        <div style={{ display: "flex", gap: 10 }}>
-          {[
-            { id: "stack", label: "Stack (LIFO)" },
-            { id: "queue", label: "Queue (FIFO)" },
-            { id: "binary-search", label: "Binary Search & Pointers" }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setSubMode(tab.id)}
-              style={{
-                background: subMode === tab.id ? "#f59e0b22" : "#080b14",
-                color: subMode === tab.id ? "#fbbf24" : "#94a3b8",
-                border: `1px solid ${subMode === tab.id ? "#f59e0b" : "#1e293b"}`,
-                borderRadius: 6,
-                padding: "8px 16px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {[
+          { id: "binary-search", label: "Binary Search & Pointers" },
+          { id: "stack", label: "Stack (LIFO)" },
+          { id: "queue", label: "Queue (FIFO)" }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSubMode(tab.id)}
+            style={{
+              background: subMode === tab.id ? "#f59e0b22" : "#080b14",
+              color: subMode === tab.id ? "#fbbf24" : "#94a3b8",
+              border: `1px solid ${subMode === tab.id ? "#f59e0b" : "#1e293b"}`,
+              borderRadius: 5,
+              padding: "6px 12px",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* STACK VISUALIZER */}
-      {subMode === "stack" && (
-        <div style={{
-          background: "#0d1321",
-          border: "1px solid #1a2740",
-          borderRadius: 12,
-          padding: "24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 20
-        }}>
-          {/* Operations bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <input
-              type="number"
-              value={stackInput}
-              onChange={e => setStackInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handlePush()}
-              placeholder="Value"
-              style={{
-                background: "#080b14",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                color: "#e2e8f0",
-                padding: "6px 12px",
-                fontSize: 12,
-                width: 90
-              }}
-            />
-            <button
-              onClick={handlePush}
-              style={{
-                background: "#f59e0b",
-                color: "#080b14",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              Push
-            </button>
-            <button
-              onClick={handlePop}
-              style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              Pop
-            </button>
-            <button
-              onClick={handlePeek}
-              style={{
-                background: "#080b14",
-                color: "#94a3b8",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                cursor: "pointer"
-              }}
-            >
-              Peek
-            </button>
-            <button
-              onClick={() => setStackItems([])}
-              style={{
-                background: "#080b14",
-                color: "#64748b",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                cursor: "pointer"
-              }}
-            >
-              Clear
-            </button>
-          </div>
+      {/* Main Grid: Split Layout in Advanced Mode */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: (mode === "advanced" && subMode === "binary-search") ? "1fr 420px" : "1fr",
+        gap: 16
+      }}>
+        {/* Left Column: Visual Structure */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* BINARY SEARCH VIEW */}
+          {subMode === "binary-search" && (
+            <div style={{
+              background: "#0a0d16",
+              border: "1px solid #1a2035",
+              borderRadius: 10,
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "#64748b" }}>Target Value:</span>
+                <input
+                  type="number"
+                  value={targetVal}
+                  onChange={e => setTargetVal(parseInt(e.target.value, 10) || 0)}
+                  style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 5, color: "#f59e0b", padding: "4px 8px", fontSize: 12, fontWeight: 700, width: 60, textAlign: "center" }}
+                />
+                {[15, 45, 89].map(t => (
+                  <button key={t} onClick={() => setTargetVal(t)} style={{ background: targetVal === t ? "#f59e0b22" : "#080b14", color: targetVal === t ? "#fbbf24" : "#94a3b8", border: `1px solid ${targetVal === t ? "#f59e0b" : "#1e293b"}`, borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
 
-          {/* Visual Vertical Stack Frame */}
-          <div style={{
-            minHeight: 260,
-            background: "#080b14",
-            border: "2px dashed #1e293b",
-            borderRadius: 8,
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column-reverse",
-            alignItems: "center",
-            gap: 8,
-            position: "relative"
-          }}>
-            {stackItems.map((val, idx) => {
-              const isTop = idx === stackItems.length - 1;
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    width: 220,
-                    height: 42,
-                    background: isTop ? "#f59e0b22" : "#0d1321",
-                    border: `2px solid ${isTop ? "#f59e0b" : "#1e293b"}`,
-                    borderRadius: 6,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0 16px",
-                    fontWeight: 700,
-                    color: isTop ? "#fbbf24" : "#e2e8f0",
-                    transition: "all 0.25s ease",
-                    boxShadow: isTop ? "0 0 12px rgba(245, 158, 11, 0.3)" : "none"
-                  }}
-                >
-                  <span style={{ fontSize: 11, color: "#64748b" }}>[{idx}]</span>
-                  <span style={{ fontSize: 16 }}>{val}</span>
-                  {isTop ? (
-                    <span style={{ fontSize: 10, background: "#f59e0b", color: "#080b14", padding: "2px 6px", borderRadius: 4, fontWeight: 800 }}>
-                      TOP
-                    </span>
-                  ) : <div style={{ width: 30 }} />}
-                </div>
-              );
-            })}
-            {stackItems.length === 0 && (
-              <span style={{ color: "#475569", fontSize: 13, margin: "auto" }}>
-                Stack is currently empty
-              </span>
-            )}
-          </div>
+              {/* Sorted Array Cells */}
+              <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "12px 2px", alignItems: "center" }}>
+                {bsArray.map((val, idx) => {
+                  const isLow = curBsStep?.low === idx;
+                  const isHigh = curBsStep?.high === idx;
+                  const isMid = curBsStep?.mid === idx;
+                  const inRange = idx >= curBsStep?.low && idx <= curBsStep?.high;
 
-          <div style={{
-            background: "#080b14",
-            border: "1px solid #1e293b",
-            borderRadius: 8,
-            padding: "12px 16px",
-            fontSize: 13,
-            color: "#fbbf24"
-          }}>
-            {stackMessage}
-          </div>
-        </div>
-      )}
+                  let bg = inRange ? "#080b14" : "#06080f";
+                  let border = inRange ? "1px solid #1e293b" : "1px solid #111827";
+                  let color = inRange ? "#e2e8f0" : "#334155";
 
-      {/* QUEUE VISUALIZER */}
-      {subMode === "queue" && (
-        <div style={{
-          background: "#0d1321",
-          border: "1px solid #1a2740",
-          borderRadius: 12,
-          padding: "24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 20
-        }}>
-          {/* Operations bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <input
-              type="number"
-              value={queueInput}
-              onChange={e => setQueueInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleEnqueue()}
-              placeholder="Value"
-              style={{
-                background: "#080b14",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                color: "#e2e8f0",
-                padding: "6px 12px",
-                fontSize: 12,
-                width: 90
-              }}
-            />
-            <button
-              onClick={handleEnqueue}
-              style={{
-                background: "#06b6d4",
-                color: "#080b14",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              Enqueue (Rear)
-            </button>
-            <button
-              onClick={handleDequeue}
-              style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              Dequeue (Front)
-            </button>
-            <button
-              onClick={() => setQueueItems([])}
-              style={{
-                background: "#080b14",
-                color: "#64748b",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                cursor: "pointer"
-              }}
-            >
-              Clear
-            </button>
-          </div>
+                  if (isMid) {
+                    bg = curBsStep.status === "found" ? "#10b98133" : "#f59e0b22";
+                    border = curBsStep.status === "found" ? "2px solid #10b981" : "2px solid #f59e0b";
+                    color = curBsStep.status === "found" ? "#34d399" : "#fbbf24";
+                  }
 
-          {/* Visual Horizontal FIFO Line */}
-          <div style={{
-            minHeight: 180,
-            background: "#080b14",
-            border: "2px dashed #1e293b",
-            borderRadius: 8,
-            padding: "20px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            overflowX: "auto"
-          }}>
-            {queueItems.map((val, idx) => {
-              const isFront = idx === 0;
-              const isRear = idx === queueItems.length - 1;
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    minWidth: 64,
-                    height: 80,
-                    background: isFront ? "#06b6d422" : isRear ? "#f59e0b22" : "#0d1321",
-                    border: `2px solid ${isFront ? "#06b6d4" : isRear ? "#f59e0b" : "#1e293b"}`,
-                    borderRadius: 8,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 4,
-                    transition: "all 0.25s ease"
-                  }}
-                >
-                  <span style={{ fontSize: 10, color: "#64748b" }}>[{idx}]</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>{val}</span>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: isFront ? "#38bdf8" : isRear ? "#fbbf24" : "transparent" }}>
-                    {isFront ? "FRONT" : isRear ? "REAR" : "·"}
-                  </span>
-                </div>
-              );
-            })}
-            {queueItems.length === 0 && (
-              <span style={{ color: "#475569", fontSize: 13, margin: "auto" }}>
-                Queue is currently empty
-              </span>
-            )}
-          </div>
+                  return (
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 44 }}>
+                      <div style={{ height: 14, display: "flex", gap: 2 }}>
+                        {isLow && <span style={{ fontSize: 8, background: "#38bdf8", color: "#080b14", padding: "1px 3px", borderRadius: 2, fontWeight: 800 }}>L</span>}
+                        {isHigh && <span style={{ fontSize: 8, background: "#ec4899", color: "#fff", padding: "1px 3px", borderRadius: 2, fontWeight: 800 }}>H</span>}
+                      </div>
+                      <div style={{ width: 44, height: 46, background: bg, border, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color }}>
+                        {val}
+                      </div>
+                      <span style={{ fontSize: 9, color: isMid ? "#fbbf24" : "#475569" }}>{isMid ? "MID" : `[${idx}]`}</span>
+                    </div>
+                  );
+                })}
+              </div>
 
-          <div style={{
-            background: "#080b14",
-            border: "1px solid #1e293b",
-            borderRadius: 8,
-            padding: "12px 16px",
-            fontSize: 13,
-            color: "#38bdf8"
-          }}>
-            {queueMessage}
-          </div>
-        </div>
-      )}
-
-      {/* BINARY SEARCH VISUALIZER */}
-      {subMode === "binary-search" && (
-        <div style={{
-          background: "#0d1321",
-          border: "1px solid #1a2740",
-          borderRadius: 12,
-          padding: "24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 20
-        }}>
-          {/* Target input strip */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, color: "#64748b" }}>Target Value:</span>
-            <input
-              type="number"
-              value={targetVal}
-              onChange={e => setTargetVal(parseInt(e.target.value, 10) || 0)}
-              style={{
-                background: "#080b14",
-                border: "1px solid #1e293b",
-                borderRadius: 6,
-                color: "#f59e0b",
-                padding: "6px 12px",
-                fontSize: 13,
-                fontWeight: 700,
-                width: 80,
-                textAlign: "center"
-              }}
-            />
-            <span style={{ fontSize: 12, color: "#64748b" }}>Preset Targets:</span>
-            {[15, 45, 89, 99].map(t => (
-              <button
-                key={t}
-                onClick={() => setTargetVal(t)}
-                style={{
-                  background: targetVal === t ? "#f59e0b22" : "#080b14",
-                  color: targetVal === t ? "#fbbf24" : "#94a3b8",
-                  border: `1px solid ${targetVal === t ? "#f59e0b" : "#1e293b"}`,
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  fontSize: 11,
-                  cursor: "pointer"
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* Sorted Array with Low, Mid, High Pointers */}
-          <div style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            padding: "16px 4px",
-            alignItems: "center"
-          }}>
-            {bsArray.map((val, idx) => {
-              const isLow = curBsStep?.low === idx;
-              const isHigh = curBsStep?.high === idx;
-              const isMid = curBsStep?.mid === idx;
-              const inRange = idx >= curBsStep?.low && idx <= curBsStep?.high;
-
-              let bgColor = inRange ? "#080b14" : "#06080f";
-              let borderColor = inRange ? "#1e293b" : "#111827";
-              let textColor = inRange ? "#e2e8f0" : "#334155";
-
-              if (isMid) {
-                bgColor = curBsStep.status === "found" ? "#10b98133" : "#f59e0b22";
-                borderColor = curBsStep.status === "found" ? "#10b981" : "#f59e0b";
-                textColor = curBsStep.status === "found" ? "#34d399" : "#fbbf24";
-              }
-
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 6,
-                    minWidth: 50
-                  }}
-                >
-                  {/* Top Pointer Tags */}
-                  <div style={{ height: 18, display: "flex", gap: 2 }}>
-                    {isLow && <span style={{ fontSize: 9, background: "#38bdf8", color: "#080b14", padding: "1px 4px", borderRadius: 3, fontWeight: 800 }}>L</span>}
-                    {isHigh && <span style={{ fontSize: 9, background: "#ec4899", color: "#fff", padding: "1px 4px", borderRadius: 3, fontWeight: 800 }}>H</span>}
-                  </div>
-
-                  {/* Cell */}
-                  <div
-                    style={{
-                      width: 50,
-                      height: 52,
-                      background: bgColor,
-                      border: `2px solid ${borderColor}`,
-                      borderRadius: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: textColor,
-                      transition: "all 0.25s ease",
-                      boxShadow: isMid ? "0 0 12px rgba(245, 158, 11, 0.4)" : "none"
-                    }}
-                  >
-                    {val}
-                  </div>
-
-                  {/* Index and Mid Label */}
-                  <span style={{ fontSize: 10, color: isMid ? "#fbbf24" : "#475569", fontWeight: 600 }}>
-                    {isMid ? "MID" : `[${idx}]`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Commentary */}
-          <div style={{
-            background: "#080b14",
-            border: `1px solid ${curBsStep?.status === "found" ? "#10b981" : "#1e293b"}`,
-            borderRadius: 8,
-            padding: "14px 18px",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#e2e8f0"
-          }}>
-            {curBsStep?.desc}
-          </div>
-
-          {/* Controls */}
-          <div style={{
-            background: "#0a0d16",
-            border: "1px solid #1a2035",
-            borderRadius: 8,
-            padding: "10px 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between"
-          }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => setBsStepIdx(0)}
-                style={{
-                  background: "#0d1321",
-                  border: "1px solid #1e293b",
-                  borderRadius: 6,
-                  color: "#94a3b8",
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  cursor: "pointer"
-                }}
-              >
-                <RotateCcw size={14} />
-              </button>
-              <button
-                onClick={() => setBsPlaying(!bsPlaying)}
-                style={{
-                  background: bsPlaying ? "#f59e0b" : "#6366f1",
-                  border: "none",
-                  borderRadius: 6,
-                  color: "#fff",
-                  padding: "6px 16px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                {bsPlaying ? <Pause size={14} /> : <Play size={14} />}
-                {bsPlaying ? "Pause" : "Search"}
-              </button>
-              <button
-                onClick={() => setBsStepIdx(i => Math.min(bsSteps.length - 1, i + 1))}
-                disabled={bsStepIdx >= bsSteps.length - 1}
-                style={{
-                  background: "#0d1321",
-                  border: "1px solid #1e293b",
-                  borderRadius: 6,
-                  color: bsStepIdx >= bsSteps.length - 1 ? "#334155" : "#e2e8f0",
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  cursor: bsStepIdx >= bsSteps.length - 1 ? "not-allowed" : "pointer"
-                }}
-              >
-                <SkipForward size={14} />
-              </button>
+              <div style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 6, padding: "10px 12px", fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>
+                {curBsStep?.desc}
+              </div>
             </div>
+          )}
 
-            <span style={{ fontSize: 12, color: "#64748b" }}>
-              Step {bsStepIdx + 1} of {bsSteps.length}
-            </span>
+          {/* STACK VIEW */}
+          {subMode === "stack" && (
+            <div style={{ background: "#0a0d16", border: "1px solid #1a2035", borderRadius: 10, padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="number" value={stackInput} onChange={e => setStackInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handlePush()} placeholder="Val" style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 5, color: "#e2e8f0", padding: "4px 8px", fontSize: 11, width: 70 }} />
+                <button onClick={handlePush} style={{ background: "#f59e0b", color: "#080b14", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Push</button>
+                <button onClick={handlePop} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>Pop</button>
+              </div>
+
+              <div style={{ minHeight: 220, background: "#080b14", border: "1px dashed #1e293b", borderRadius: 6, padding: "16px", display: "flex", flexDirection: "column-reverse", alignItems: "center", gap: 6 }}>
+                {stackItems.map((val, idx) => {
+                  const isTop = idx === stackItems.length - 1;
+                  return (
+                    <div key={idx} style={{ width: 180, height: 36, background: isTop ? "#f59e0b22" : "#0d1321", border: `1px solid ${isTop ? "#f59e0b" : "#1e293b"}`, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", color: isTop ? "#fbbf24" : "#e2e8f0", fontWeight: 700, fontSize: 13 }}>
+                      <span style={{ fontSize: 10, color: "#64748b" }}>[{idx}]</span>
+                      <span>{val}</span>
+                      {isTop && <span style={{ fontSize: 8, background: "#f59e0b", color: "#080b14", padding: "1px 4px", borderRadius: 3 }}>TOP</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: "#fbbf24" }}>{stackMessage}</div>
+            </div>
+          )}
+
+          {/* QUEUE VIEW */}
+          {subMode === "queue" && (
+            <div style={{ background: "#0a0d16", border: "1px solid #1a2035", borderRadius: 10, padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="number" value={queueInput} onChange={e => setQueueInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleEnqueue()} placeholder="Val" style={{ background: "#080b14", border: "1px solid #1e293b", borderRadius: 5, color: "#e2e8f0", padding: "4px 8px", fontSize: 11, width: 70 }} />
+                <button onClick={handleEnqueue} style={{ background: "#06b6d4", color: "#080b14", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Enqueue</button>
+                <button onClick={handleDequeue} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>Dequeue</button>
+              </div>
+
+              <div style={{ minHeight: 140, background: "#080b14", border: "1px dashed #1e293b", borderRadius: 6, padding: "16px", display: "flex", alignItems: "center", gap: 8, overflowX: "auto" }}>
+                {queueItems.map((val, idx) => (
+                  <div key={idx} style={{ minWidth: 54, height: 64, background: idx === 0 ? "#06b6d422" : "#0d1321", border: `1px solid ${idx === 0 ? "#06b6d4" : "#1e293b"}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                    <span style={{ fontSize: 9, color: "#64748b" }}>[{idx}]</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{val}</span>
+                    <span style={{ fontSize: 8, color: idx === 0 ? "#38bdf8" : "#64748b" }}>{idx === 0 ? "FRONT" : idx === queueItems.length - 1 ? "REAR" : ""}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: "#38bdf8" }}>{queueMessage}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Code Stepper Panel (in Advanced Mode for Binary Search) */}
+        {mode === "advanced" && subMode === "binary-search" && (
+          <CodeStepperPanel
+            codeLines={codeData}
+            activePhase={curBsStep?.codePhase}
+            variables={liveVariables}
+            title="Binary Search"
+          />
+        )}
+      </div>
+
+      {/* Binary search playback footer if binary search active */}
+      {subMode === "binary-search" && (
+        <div style={{ background: "#0a0d16", border: "1px solid #1a2035", borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => setBsStepIdx(0)} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 4, color: "#94a3b8", padding: "4px 8px", fontSize: 10, cursor: "pointer" }}><RotateCcw size={11} /></button>
+            <button onClick={() => setBsPlaying(!bsPlaying)} style={{ background: bsPlaying ? "#f59e0b" : "#6366f1", border: "none", borderRadius: 4, color: "#fff", padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              {bsPlaying ? <Pause size={11} /> : <Play size={11} />} {bsPlaying ? "Pause" : "Search"}
+            </button>
+            <button onClick={() => setBsStepIdx(i => Math.min(bsSteps.length - 1, i + 1))} disabled={bsStepIdx >= bsSteps.length - 1} style={{ background: "#0d1321", border: "1px solid #1e293b", borderRadius: 4, color: bsStepIdx >= bsSteps.length - 1 ? "#334155" : "#e2e8f0", padding: "4px 8px", cursor: bsStepIdx >= bsSteps.length - 1 ? "not-allowed" : "pointer" }}><SkipForward size={11} /></button>
           </div>
+          <span style={{ fontSize: 10, color: "#64748b" }}>Step {bsStepIdx + 1} of {bsSteps.length}</span>
         </div>
       )}
     </div>
